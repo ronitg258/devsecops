@@ -1,0 +1,303 @@
+Q1
+apiVersion: v1
+kind: Pod
+metadata:
+  name: nginx-pod
+  labels:
+    app: nginx
+spec:
+  containers:
+  - name: nginx-container
+    image: nginx:latest
+    ports:
+    - containerPort: 80
+
+-------------------------------------------------------------------------
+Q2
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nginx-deployment
+spec:
+  replicas: 4
+  selector:
+    matchLabels:
+      app: nginx
+  template:
+    metadata:
+      labels:
+        app: nginx
+    spec:
+      containers:
+      - name: nginx
+        image: nginx:latest
+        ports:
+        - containerPort: 80
+
+----------------------------------------------------------------------------
+Q3
+apiVersion: v1
+kind: Service
+metadata:
+  name: nginx-service
+  labels:
+    app: nginx
+spec:
+  selector:
+    app: nginx
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 80
+  type: NodePort
+
+-------------------------------------------------------------------------------
+Q4
+apiVersion: v1
+kind: ConfigMap
+metadata:
+ name: config-map
+data:
+volumes:
+- name: config-map-volume
+ configMap:
+   name: config-map
+containers:
+- name: nginx
+ volumeMounts:
+ - name: config-map-volume
+   mountPath: 
+   readOnly: true
+
+---------------------------------------------------------------------------------
+Q5
+version: '3'
+
+services:
+  # Database
+  db:
+    image: mysql:5.7
+    volumes:
+      - db_data:/var/lib/mysql
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: password
+      MYSQL_DATABASE: wordpress
+      MYSQL_USER: wordpress
+      MYSQL_PASSWORD: wordpress
+
+  # Wordpress
+   wordpress:
+    depends_on:
+      - db
+    image: wordpress:latest
+    ports:
+      - '8000:80'
+    restart: always
+    volumes: ['./:/var/www/html']
+    environment:
+      WORDPRESS_DB_HOST: db:3306
+      WORDPRESS_DB_USER: wordpress
+      WORDPRESS_DB_PASSWORD: wordpress
+
+   volumes:
+     db_data:
+
+----------------------------------------------------------------------------------
+Q6
+app.js--->
+
+app.js
+
+const express = require('express');
+const app = express();
+
+app.get('/', (req, res) => {
+  res.send('Hello, Docker!');
+});
+
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => {
+  console.log(`Server is running on port ${PORT}`);
+});
+
+
+###################################
+
+package.json--->
+
+{
+  "name": "docker-node-app",
+  "version": "1.0.0",
+  "description": "A simple Node.js app for Docker",
+  "main": "app.js",
+  "dependencies": {
+    "express": "^4.17.1"
+  }
+}
+
+
+#####################################
+
+Dockerfile
+
+FROM node:14
+
+WORKDIR /usr/src/app
+
+COPY package*.json ./
+
+RUN npm install
+
+COPY . .
+
+EXPOSE 3000
+
+CMD ["node", "app.js"]
+
+
+########################################
+
+docker build -t your-image-name .
+
+docker run -p 3000:3000 -d your-image-name
+
+---------------------------------------------------------------------------------------------
+Q7
+app.py
+
+from flask import Flask
+
+app = Flask(__name__)
+
+@app.route('/')
+def hello_docker():
+    return 'Hello, Docker!'
+
+if __name__ == '__main__':
+    app.run(debug=True, host='0.0.0.0', port=5000)
+
+Dockerfile 
+
+FROM python:3.9-slim
+WORKDIR /app
+COPY app.py /app
+RUN pip install --no-cache-dir Flask
+EXPOSE 5000
+CMD ["python", "app.py"]
+
+--------------------------------------------------------------------------------------------
+Q8
+# Configure the AWS Provider
+provider "aws" {
+  region = "ap-south-1"
+}
+
+# Create a key pair for SSH access
+resource "aws_key_pair" "ssh_key" {
+  key_name   = ""
+  public_key = ""
+}
+
+# Create a security group that allows SSH access
+resource "aws_security_group" "ssh_sg" {
+  name        = "ssh_sg"
+  description = "Security group for SSH access"
+
+  # Allow incoming traffic on port 22 from any IP address
+  ingress {
+    from_port   = 22
+    to_port     = 22
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  # Allow all outbound traffic
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+}
+
+# Create an EC2 instance and associate it with the key pair and security group
+resource "aws_instance" "ec2_instance" {
+  ami           = "" 
+  instance_type = ""
+  key_name      = aws_key_pair.ssh_key.key_name
+  vpc_security_group_ids = [aws_security_group.ssh_sg.id]
+
+  tags = {
+    Name = "ec2_instance"
+  }
+}
+
+--------------------------------------------------------------------------------------------
+Q9
+# Define the provider as AWS
+provider "aws" {
+  region = "ap-south-1"
+}
+ 
+# Create a security group for the RDS instance
+resource "aws_security_group" "rds_sg" {
+  name = "rds_sg"
+ 
+  # Allow inbound traffic from any IP on port 3306 (MySQL)
+  ingress {
+    from_port = 3306
+    to_port = 3306
+    protocol = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+ 
+  # Allow outbound traffic to any IP on any port
+  egress {
+    from_port = 0
+    to_port = 0
+    protocol = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+}
+ 
+# Create a subnet group for the RDS instance
+resource "aws_db_subnet_group" "rds_subnet_group" {
+  name = "rds_subnet_group"
+  subnet_ids = ["subnet-12345678", "subnet-87654321"] # Replace with your subnet IDs
+}
+ 
+# Create a parameter group for the RDS instance
+resource "aws_db_parameter_group" "rds_parameter_group" {
+  name = "rds_parameter_group"
+  family = "mysql5.7"
+ 
+  # Set some custom parameters for MySQL
+  parameter {
+    name = "character_set_server"
+    value = "utf8mb4"
+  }
+ 
+  parameter {
+    name = "collation_server"
+    value = "utf8mb4_unicode_ci"
+  }
+}
+ 
+# Create the RDS instance
+resource "aws_db_instance" "rds_instance" {
+  engine = "mysql"
+  identifier = "my-rds-instance"
+  allocated_storage = 20
+  engine_version = "5.7.34"
+  instance_class = "db.t2.micro"
+  username = "admin"
+  password = "password"
+  db_subnet_group_name = aws_db_subnet_group.rds_subnet_group.name
+  vpc_security_group_ids = [aws_security_group.rds_sg.id]
+  parameter_group_name = aws_db_parameter_group.rds_parameter_group.name
+  skip_final_snapshot = true
+  publicly_accessible = true
+}
+
+------------------------------------------------------------------------------------------------
